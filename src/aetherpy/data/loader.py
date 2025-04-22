@@ -78,3 +78,68 @@ class DEM:
                     h11 * dr*dc)
         else:
             raise ValueError(f"Unknown method {method!r}")
+
+
+    def rasterize_mask(self,
+                       vector_path: str,
+                       layer: str = None,
+                       where: tuple = None,
+                       all_touched: bool = False,
+                       invert: bool = False) -> np.ndarray:
+        """
+        Rasterize a vector file (e.g. Shapefile) into a boolean mask
+        matching this DEM’s grid.
+
+        Parameters
+        ----------
+        vector_path : str
+            Path to a vector file (Shapefile, GeoPackage, etc.).
+        layer : str, optional
+            Name of the layer inside a multi‑layer datasource.
+        where : tuple(field_name, value), optional
+            If given, only features where properties[field_name] == value
+            are rasterized.
+        all_touched : bool
+            If True, marks all pixels touched by the geometry as True.
+        invert : bool
+            If True, flips the mask (i.e. background becomes True).
+
+        Returns
+        -------
+        mask : 2D bool ndarray
+            Same shape as `self.array`, True where the vector covers.
+        """
+        if self.transform is None:
+            raise ValueError("DEM has no georeference; cannot rasterize vector.")
+
+        import fiona
+        from rasterio.features import rasterize
+
+        # 1) read geometries
+        with fiona.open(vector_path, layer=layer) as src:
+            if where:
+                field, val = where
+                geoms = [
+                    feat["geometry"]
+                    for feat in src
+                    if feat["properties"].get(field) == val
+                ]
+            else:
+                geoms = [feat["geometry"] for feat in src]
+
+        # 2) rasterize to DEM grid
+        shapes = ((geom, 1) for geom in geoms)
+        mask = rasterize(
+            shapes,
+            out_shape=(self.nrows, self.ncols),
+            transform=self.transform,
+            fill=0,
+            all_touched=all_touched,
+            dtype="uint8"
+        ).astype(bool)
+
+        # 3) invert if requested
+        if invert:
+            mask = ~mask
+
+        return mask
