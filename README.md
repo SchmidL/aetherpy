@@ -1,6 +1,4 @@
-# Untitled
-
-![](https://www.notion.sodocs/banner.png)
+![Banner](assets/banner.png)
 
 # AetherPy
 
