@@ -1,6 +1,6 @@
 from aetherpy.data.loader      import DEM
 from aetherpy.core.multiobserver import inverse_visibility
-from aetherpy.io.plotting      import plot_visibility_indices
+from aetherpy.io.plotting      import plot_visibility_results
 
 from aetherpy.core.multiobserver import best_observers_from_index
 
@@ -30,17 +30,12 @@ best_obs = best_observers_from_index(result, k=10)[0]
 
 # 5. Plot both maps
 # plot raw counts
-plot_visibility_indices(
-    dem, result,
+plot_visibility_results(
+    dem,
+    result,
     target_mask=target_mask,
     observer=best_obs,
-    value="count"
+    obs_metric="count",
+    tgt_metric="active_ratio",
 )
 
-# plot normalized ratios
-plot_visibility_indices(
-    dem, result,
-    target_mask=target_mask,
-    observer=best_obs,
-    value="ratio"
-)

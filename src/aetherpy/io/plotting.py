@@ -47,76 +47,96 @@ def plot_viewshed(dem, vs, observer=None, figsize=(8, 6)):
 
 
 
-def plot_visibility_indices(dem, result,
-                            target_mask=None,
-                            observer=None,
-                            value="ratio",
-                            figsize=(14, 6)):
+def plot_visibility_results(
+    dem,
+    result,
+    target_mask=None,
+    observer=None,
+    obs_metric="ratio",
+    tgt_metric="ratio",
+    figsize=(14, 6),
+):
     """
-    Plot two side‑by‑side panels:
-      Left : observer metric (ratio or count)
-      Right: target metric (ratio or count), with optional mask
+    Plot two panels: observer metric (left) and target metric (right).
 
     Parameters
     ----------
     dem : DEM
-    target_mask : 2D bool array, optional
-      If given, overlays the target area on the right plot.
-    observer : (row, col), optional
-      Marks the observer location on the left plot.
-
     result : VisibilityResult
-      Namedtuple with fields obs_counts, obs_ratio, tgt_counts, tgt_ratio.
+        Namedtuple from inverse_visibility.
+    target_mask : 2D bool array, optional
+        To overlay as red on the target plot.
+    observer : (row, col), optional
+        Mark this observer on the left plot.
+    obs_metric : str
+        One of:
+          - "count"          -> result.obs_counts
+          - "ratio"          -> result.obs_ratio
+    tgt_metric : str
+        One of:
+          - "count"          -> result.tgt_counts
+          - "ratio"          -> result.tgt_ratio
+          - "possible_count" -> result.tgt_possible_counts
+          - "possible_ratio" -> result.tgt_possible_ratio
+          - "active_ratio"   -> result.tgt_active_ratio
+    figsize : tuple
+        Figure size.
     """
-    import matplotlib.pyplot as plt
-    import numpy as np
+    # Map metric names to (label, data array)
+    obs_map = {
+        "count": ("Observer visible target count", result.obs_counts),
+        "ratio": ("Observer visibility ratio",   result.obs_ratio),
+    }
+    tgt_map = {
+        "count":           ("Target visible observer count", result.tgt_counts),
+        "ratio":           ("Target visibility ratio",        result.tgt_ratio),
+        "possible_count":  ("Target possible observer count", result.tgt_possible_counts),
+        "possible_ratio":  ("Target possible observer ratio", result.tgt_possible_ratio),
+        "active_ratio":    ("Target active observer ratio",   result.tgt_active_ratio),
+    }
+
+    if obs_metric not in obs_map:
+        raise ValueError(f"obs_metric must be one of {list(obs_map)}")
+    if tgt_metric not in tgt_map:
+        raise ValueError(f"tgt_metric must be one of {list(tgt_map)}")
+
+    obs_label, obs_data = obs_map[obs_metric]
+    tgt_label, tgt_data = tgt_map[tgt_metric]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-    # extents
-    if dem.transform:
+    # Compute extent if georeferenced
+    if dem.transform is not None:
         left, top = dem.transform * (0, 0)
         right, bottom = dem.transform * (dem.ncols, dem.nrows)
         extent = (left, right, bottom, top)
     else:
         extent = None
 
-    # pick data based on value type
-    if value == "ratio":
-        obs_data = result.obs_ratio
-        tgt_data = result.tgt_ratio
-        obs_label = "Observer visibility ratio"
-        tgt_label = "Target visibility ratio"
-    elif value == "count":
-        obs_data = result.obs_counts
-        tgt_data = result.tgt_counts
-        obs_label = "Observer visible target count"
-        tgt_label = "Target visible observer count"
-    else:
-        raise ValueError("value must be 'ratio' or 'count'")
-
-    # Left: observer metric
+    # --- Left panel: observer metric ---
     im1 = ax1.imshow(obs_data, origin="upper", extent=extent)
     fig.colorbar(im1, ax=ax1, label=obs_label)
-    if observer:
-        x, y = dem.coord(*observer)
-        ax1.plot(x, y, 'wx', markersize=8)
-    ax1.set_title('Observer visibility index')
-    ax1.set_xlabel('X'); ax1.set_ylabel('Y')
+    if observer is not None:
+        if dem.transform is not None:
+            x, y = dem.coord(*observer)
+            ax1.plot(x, y, marker="x", color="white", markersize=8)
+        else:
+            ax1.plot(observer[1], observer[0], marker="x", color="white", markersize=8)
+    ax1.set_title(obs_label)
+    ax1.set_xlabel("X")
+    ax1.set_ylabel("Y")
 
-    # Right: target visibility ratio
-    if tgt_data is not None:
-        im2 = ax2.imshow(tgt_data, origin="upper", extent=extent)
-        fig.colorbar(im2, ax=ax2, label=tgt_label)
-        if target_mask is not None:
-            # overlay target boundary in red
-            mask = np.ma.masked_where(~target_mask, target_mask)
-            ax2.imshow(mask, origin='upper', extent=extent,
-                       cmap='Reds', alpha=0.4)
-        ax2.set_title('Target visibility ratio')
-        ax2.set_xlabel('X'); ax2.set_ylabel('Y')
-    else:
-        ax2.axis('off')
+    # --- Right panel: target metric ---
+    im2 = ax2.imshow(tgt_data, origin="upper", extent=extent)
+    fig.colorbar(im2, ax=ax2, label=tgt_label)
+    if target_mask is not None:
+        # overlay target area in red
+        mask = np.ma.masked_where(~target_mask, target_mask)
+        ax2.imshow(mask, origin="upper", extent=extent,
+                   cmap="Reds", alpha=0.4)
+    ax2.set_title(tgt_label)
+    ax2.set_xlabel("X")
+    ax2.set_ylabel("Y")
 
     plt.tight_layout()
     plt.show()

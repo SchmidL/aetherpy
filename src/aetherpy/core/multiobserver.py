@@ -9,7 +9,15 @@ from numba import njit, prange
 # Namedtuple to carry both counts and ratios
 VisibilityResult = namedtuple(
     "VisibilityResult",
-    ["obs_counts", "obs_ratio", "tgt_counts", "tgt_ratio"]
+    [
+        "obs_counts",           # raw # targets seen per observer
+        "obs_ratio",            # obs_counts / total_targets
+        "tgt_counts",           # raw # observers that see each target
+        "tgt_ratio",            # tgt_counts / total_observers
+        "tgt_possible_counts",  # raw # possible observers per target
+        "tgt_possible_ratio",   # tgt_counts / tgt_possible_counts
+        "tgt_active_ratio",     # tgt_counts / # active_observers
+    ]
 )
 
 def inverse_visibility(
@@ -87,7 +95,7 @@ def inverse_visibility(
     use_bi = (interpolation.lower() == "bilinear")
 
     # call the Numba‐parallel inverse‐viewshed
-    obs_counts, tgt_counts = _inverse_counts_jit(
+    obs_counts, tgt_counts, tgt_possible = _inverse_counts_jit(
         dem.array,
         targets,
         observer_mask,
@@ -102,13 +110,31 @@ def inverse_visibility(
 
     # compute ratios
     obs_ratio = obs_counts.astype(float) / float(total_targets)
+    # 1) target‐side practical ratio
     if total_observers > 0:
         tgt_ratio = tgt_counts.astype(float) / float(total_observers)
     else:
         tgt_ratio = np.zeros_like(obs_ratio)
 
-    return VisibilityResult(obs_counts, obs_ratio,
-                            tgt_counts, tgt_ratio)
+    # 2) target‐side theoretical ratio
+    tgt_possible_ratio = np.zeros_like(tgt_ratio)
+    mask_pos = (tgt_possible > 0)
+    tgt_possible_ratio[mask_pos] = (
+        tgt_counts[mask_pos].astype(float) / tgt_possible[mask_pos].astype(float)
+    )
+
+    # 3) target‐side practical (active observers) ratio
+    active_obs = np.sum(obs_counts > 0)
+    tgt_active_ratio = np.zeros_like(tgt_ratio)
+    if active_obs > 0:
+        tgt_active_ratio = tgt_counts.astype(float) / float(active_obs)
+
+    return VisibilityResult(
+        obs_counts, obs_ratio,
+        tgt_counts, tgt_ratio,
+        tgt_possible, tgt_possible_ratio,
+        tgt_active_ratio
+    )
 
 
 def best_observers_from_index(results, k=1):
@@ -138,10 +164,14 @@ def _inverse_counts_jit(arr, targets, observer_mask,
 
     obs_counts = np.zeros((nrows, ncols), np.int32)
     tgt_counts = np.zeros((nrows, ncols), np.int32)
+    tgt_possible = np.zeros((nrows, ncols), np.int32)
 
     for t in prange(nt):
         ti = targets[t, 0]
         tj = targets[t, 1]
+
+        # count theoretical possible observers (geometry only)
+        possible_ct = 0
 
         # compute viewshed from this target
         vs = _viewshed_naive(
@@ -156,9 +186,33 @@ def _inverse_counts_jit(arr, targets, observer_mask,
         cnt = 0
         for i in range(nrows):
             for j in range(ncols):
+                # check geometric constraints _first_ (we know vs implies constraints)
+                dy = (i - ti) * res_y
+                dx = (j - tj) * res_x
+                dist2 = dy*dy + dx*dx
+                if (maxd >= 0.0 and dist2 > maxd*maxd) or dist2 < min_d*min_d:
+                    continue
+                ang = math.atan2(dy, dx)
+                if ang < 0:
+                    ang += 2*math.pi
+                if az2 >= az1:
+                    if not (az1 <= ang <= az2):
+                        continue
+                else:
+                    if not (ang >= az1 or ang <= az2):
+                        continue
+                hi = arr[i, j]
+                ang_v = math.atan2(hi - (arr[ti, tj] + obs_h), math.sqrt(dist2))
+                if ang_v < elev_min or ang_v > elev_max:
+                    continue
+                # observer is theoretically possible
+                if observer_mask[i, j]:
+                    possible_ct += 1
+                # now count actual LOS
                 if vs[i, j] and observer_mask[i, j]:
                     obs_counts[i, j] += 1
                     cnt += 1
         tgt_counts[ti, tj] = cnt
+        tgt_possible[ti, tj] = possible_ct
 
-    return obs_counts, tgt_counts
+    return obs_counts, tgt_counts, tgt_possible
