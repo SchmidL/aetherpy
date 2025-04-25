@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write       # push tags & changelog
+      issues: write
       pull-requests: write
       id-token: write       # if using OIDC for PyPI
       packages: write       # publish packages
