@@ -81,7 +81,7 @@ Please see LICENSE‑MIT for details of the MIT terms, or contact us for commerc
 
 I maintain aetherpy in my free time. If you find it valuable—especially in a commercial setting—please consider supporting my work:
 
-[Buy me a coffee](https://www.buymeacoffee.com/schmidl ☕
+[Buy me a coffee](https://www.buymeacoffee.com/schmidl) ☕
 
 Or contact me to discuss sponsorship, custom features, or commercial collaboration:
 
@@ -104,5 +104,3 @@ Please read [CONTRIBUTING.md](https://www.notion.so/digitalearth/CONTRIBUTING.md
 - **Issue Tracker:** [https://github.com/yourname/aetherpy/issues](https://github.com/SchmidL/aetherpy/issues)
 
 ---
-
-*Made with ☀️ by Your Name*
