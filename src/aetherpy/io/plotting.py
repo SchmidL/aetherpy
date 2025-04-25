@@ -2,9 +2,19 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_viewshed(dem, vs, observer=None, figsize=(8, 6)):
+from matplotlib.colors import LightSource
+
+def plot_viewshed(
+    dem,
+    vs,
+    observer=None,
+    hillshade=False,
+    dem_cmap='gray',
+    vs_cmap='Reds',
+    figsize=(8, 6)
+):
     """
-    Plot the DEM and overlay a viewshed mask.
+    Plot the DEM and overlay a viewshed mask, with optional hillshade.
 
     Parameters
     ----------
@@ -15,6 +25,12 @@ def plot_viewshed(dem, vs, observer=None, figsize=(8, 6)):
         Output of viewshed_sweep (True = visible).
     observer : tuple (row, col), optional
         Mark this point with an 'x'.
+    hillshade : bool, default False
+        If True, render the DEM as a hillshade instead of raw elevations.
+    dem_cmap : str or Colormap, default 'gray'
+        Colormap for the DEM or hillshade.
+    vs_cmap : str or Colormap, default 'Reds'
+        Colormap for the viewshed overlay.
     figsize : tuple, optional
         Figure size.
     """
@@ -22,24 +38,48 @@ def plot_viewshed(dem, vs, observer=None, figsize=(8, 6)):
 
     # Determine plotting extent
     if dem.transform is not None:
-        # Map extents in real coordinates
         left, top = dem.transform * (0, 0)
         right, bottom = dem.transform * (dem.ncols, dem.nrows)
         extent = (left, right, bottom, top)
-        ax.imshow(dem.array, origin='upper', extent=extent)
-        # mask invisible points as NaN so they’re transparent
-        mask = np.where(vs, 1.0, np.nan)
-        ax.imshow(mask, origin='upper', extent=extent, alpha=0.4)
-        if observer:
-            x, y = dem.coord(*observer)
-            ax.plot(x, y, marker='x', markersize=10)
     else:
-        ax.imshow(dem.array, origin='upper')
-        mask = np.where(vs, 1.0, np.nan)
-        ax.imshow(mask, origin='upper', alpha=0.4)
-        if observer:
-            # note: (col, row) for plotting
-            ax.plot(observer[1], observer[0], marker='x', markersize=10)
+        extent = None
+
+    # Plot DEM or hillshade
+    if hillshade:
+        # Create a hillshade from the DEM
+        ls = LightSource(azdeg=315, altdeg=45)
+        shade = ls.hillshade(
+            dem.array,
+            vert_exag=1,
+            dx=dem.res_x if dem.transform else 1,
+            dy=dem.res_y if dem.transform else 1
+        )
+        ax.imshow(shade, origin='upper', extent=extent, cmap=dem_cmap)
+    else:
+        ax.imshow(
+            dem.array,
+            origin='upper',
+            extent=extent,
+            cmap=dem_cmap
+        )
+
+    # Overlay viewshed mask in red (or chosen vs_cmap)
+    mask = np.where(vs, 1.0, np.nan)
+    ax.imshow(
+        mask,
+        origin='upper',
+        extent=extent,
+        alpha=0.4,
+        cmap=vs_cmap
+    )
+
+    # Mark observer location
+    if observer is not None:
+        if dem.transform is not None:
+            x, y = dem.coord(*observer)
+            ax.plot(x, y, marker='x', color='white', markersize=10)
+        else:
+            ax.plot(observer[1], observer[0], marker='x', color='white', markersize=10)
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
