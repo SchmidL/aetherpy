@@ -3,13 +3,19 @@ from numba import njit
 from .utils import compute_slope, euclidean_distance
 
 @njit
-def _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
+def _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x, curvature_k):
     """
     Numba‑accelerated LOS on raw elevation array with real‑world scaling.
     """
     height0 = arr[r0, c0] + obs_h
     height1 = arr[r1, c1] + tgt_h
-    slope_target = compute_slope(height1 - height0,
+    # — curvature correction at the target —
+    if curvature_k > 0.0:
+        d_t = euclidean_distance(r0, c0, r1, c1, res_y, res_x)
+        drop_t = (d_t * d_t) / (2.0 * 6371000.0 * curvature_k)
+    else:
+        drop_t = 0.0
+    slope_target = compute_slope((height1 - height0) - drop_t,
                                  r0, c0, r1, c1, res_y, res_x)
 
     # Bresenham’s setup (steep vs shallow)
@@ -42,7 +48,13 @@ def _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
         rr, cc = (x, y) if steep else (y, x)
 
         # if any intermediate slope exceeds the target slope → blocked
-        slope_i = compute_slope(arr[rr, cc] - height0,
+        # — curvature correction at the intermediate point —
+        if curvature_k > 0.0:
+            d_i = euclidean_distance(r0, c0, rr, cc, res_y, res_x)
+            drop_i = (d_i * d_i) / (2.0 * 6371000.0 * curvature_k)
+        else:
+            drop_i = 0.0
+        slope_i = compute_slope((arr[rr, cc] - height0) - drop_i,
                                 r0, c0, rr, cc, res_y, res_x)
         if slope_i > slope_target:
             return False
@@ -51,7 +63,7 @@ def _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
 
     return True
 
-def is_visible(dem, p1, p2, obs_h=0.0, tgt_h=0.0, interpolation="nearest"):
+def is_visible(dem, p1, p2, obs_h=0.0, tgt_h=0.0, interpolation="nearest", curvature_k=0.0):
     """
     Public API:
       dem  – DEM instance
@@ -65,9 +77,9 @@ def is_visible(dem, p1, p2, obs_h=0.0, tgt_h=0.0, interpolation="nearest"):
     arr = dem.array
     ry, rx = dem.res_y, dem.res_x
     if interpolation == "nearest":
-        return _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, ry, rx)
+        return _is_visible(arr, r0, c0, r1, c1, obs_h, tgt_h, ry, rx, curvature_k)
     elif interpolation == "bilinear":
-        return _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, ry, rx)
+        return _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, ry, rx,                       curvature_k)
     else:
         raise ValueError(f"Unknown interpolation {interpolation!r}")
 
@@ -97,7 +109,7 @@ def _bilinear_sample(arr, row_f, col_f):
           + h11 * dr       * dc)
 
 @njit
-def _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
+def _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x, curvature_k):
     """
     Parametric (DDA) LOS with bilinear sampling.
     Oversamples the line at roughly one sample per cell in the longest axis.
@@ -117,9 +129,13 @@ def _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
     d_r = dr / n_steps
     d_c = dc / n_steps
 
-    # slope to target
+    # slope to target with curvature drop
     dist_target = euclidean_distance(r0, c0, r1, c1, res_y, res_x)
-    slope_target = (h1 - h0) / dist_target if dist_target > 0.0 else -1e9
+    if curvature_k > 0.0:
+        drop_t = (dist_target * dist_target) / (2.0 * 6371000.0 * curvature_k)
+    else:
+        drop_t = 0.0
+    slope_target = ((h1 - h0) - drop_t) / dist_target if dist_target > 0.0 else -1e9
 
     for step in range(1, n_steps):
         rf = r0 + d_r * step
@@ -127,7 +143,13 @@ def _is_visible_bilinear(arr, r0, c0, r1, c1, obs_h, tgt_h, res_y, res_x):
         hi = _bilinear_sample(arr, rf, cf)
         # distance so far
         dist_i = euclidean_distance(r0, c0, rf, cf, res_y, res_x)
-        slope_i = (hi - h0) / dist_i if dist_i > 0.0 else -1e9
+        # apply curvature drop at this sample
+        if curvature_k > 0.0:
+            drop_i = (dist_i * dist_i) / (2.0 * 6371000.0 * curvature_k)
+        else:
+            drop_i = 0.0
+        slope_i = ((hi - h0) - drop_i) / dist_i if dist_i > 0.0 else -1e9
+        
         if slope_i > slope_target:
             return False
 

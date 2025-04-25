@@ -8,7 +8,7 @@ from .utils import timeit
 def _viewshed_naive(arr,
                     obs_r, obs_c, obs_h, maxd,
                     res_y, res_x, use_bilinear,
-                    az1, az2, elev_min, elev_max, min_d):
+                    az1, az2, elev_min, elev_max, min_d,curvature_k):
     """
     Brute‑force, Numba‑accelerated viewshed with constraints:
       - use_bilinear=False → nearest‑cell LOS
@@ -57,11 +57,11 @@ def _viewshed_naive(arr,
             # 4) line‑of‑sight check
             if use_bilinear:
                 visible = _is_visible_bilinear(
-                    arr, obs_r, obs_c, i, j, obs_h, 0.0, res_y, res_x
+                    arr, obs_r, obs_c, i, j, obs_h, 0.0, res_y, res_x,curvature_k
                 )
             else:
                 visible = _is_visible(
-                    arr, obs_r, obs_c, i, j, obs_h, 0.0, res_y, res_x
+                    arr, obs_r, obs_c, i, j, obs_h, 0.0, res_y, res_x,curvature_k
                 )
 
             if visible:
@@ -75,7 +75,8 @@ def viewshed_sweep(dem, observer,
                    interpolation="nearest",
                    azimuth_range=None,
                    elev_angle_range=None,
-                   dist_range=None):
+                   dist_range=None,
+                   curvature_k=0.0):
     """
     Compute a constrained viewshed.
 
@@ -123,5 +124,5 @@ def viewshed_sweep(dem, observer,
         arr,
         r0, c0, obs_h, maxd,
         dem.res_y, dem.res_x, use_bi,
-        az1, az2, elev_min, elev_max, min_d
+        az1, az2, elev_min, elev_max, min_d,curvature_k=0.0
     )
