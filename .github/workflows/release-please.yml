@@ -24,7 +24,7 @@ jobs:
           node-version: '18'
 
       - name: Run release-please
-        uses: google-github-actions/release-please-action@v5
+        uses: google-github-actions/release-please-action@v4
         with:
           # which release type: "node" | "python" | "go" | etc.
           release-type: python
