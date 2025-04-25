@@ -1,0 +1,38 @@
+name: Release Please
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # for pushing tags and changelog
+      pull-requests: write
+      id-token: write
+      packages: write   # for publishing to GitHub Packages (optional)
+      # if you publish to PyPI, add:
+      #   credentials: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Run release-please
+        uses: google-github-actions/release-please-action@v5
+        with:
+          # which release type: "node" | "python" | "go" | etc.
+          release-type: python
+          # where to find version (pyproject.toml)
+          package-name: aetherpy
+          # if you want a single PR that updates version & changelog
+          pull-request-title-pattern: 'chore\\(release\\): release \\${version}'
+          # optionally, where to commit CHANGELOG.md
+          changelog-path: CHANGELOG.md
+          # this will produce a draft GitHub Release on merge of the PR
+          token: ${{ secrets.GITHUB_TOKEN }}
