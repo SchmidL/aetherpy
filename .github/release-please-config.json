@@ -1,0 +1,8 @@
+{
+  "release-type": "python",
+  "package-name": "aetherpy",
+  "changelog-path": "CHANGELOG.md",
+  "include-v-in-tag": true,
+  "bump-minor-pre-major": true,
+  "version-file": "src/aetherpy/__init__.py"
+}

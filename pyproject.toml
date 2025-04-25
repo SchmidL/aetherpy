@@ -31,8 +31,11 @@ dependencies = [
 "Homepage"   = "https://github.com/SchmidL/aetherpy"
 "Repository" = "https://github.com/SchmidL/aetherpy.git"
 
+[tool.setuptools]
+package-dir = { "" = "src" }
+
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 exclude = ["tests", "examples", "docs"]
 
 [tool.release-please]

@@ -1,34 +1,32 @@
-# .github/workflows/release-please.yml
-name: Release Please
+name: release-please
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  release:
+  release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write       # push tags & changelog
-      issues: write
-      pull-requests: write
-      id-token: write       # if using OIDC for PyPI
-      packages: write       # publish packages
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: googleapis/release-please-action@v4
+        id: release
         with:
-          node-version: '18'
+          token: ${{ secrets.MY_RELEASE_TOKEN }}
+          config-file: .github/release-please-config.json
 
-      - name: Create Release PR
-        uses: googleapis/release-please-action@v4
-        with:
-          release-type: python
-          package-name: aetherpy
-          changelog-path: CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+
+      - name: Tag major and minor versions
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -d v${{ steps.release.outputs.major }} || true
+          git tag -d v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }} || true
+          git push origin :v${{ steps.release.outputs.major }} || true
+          git push origin :v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }} || true
+          git tag -a v${{ steps.release.outputs.major }} -m "Release v${{ steps.release.outputs.major }}"
+          git tag -a v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }} -m "Release v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}"
+          git push origin v${{ steps.release.outputs.major }}
+          git push origin v${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}
