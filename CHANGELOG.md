@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/SchmidL/aetherpy/compare/v0.1.0...v1.0.0) (2025-04-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* first stable release
+
+### Features
+
+* prepare 1.0.0 release ([89676db](https://github.com/SchmidL/aetherpy/commit/89676db3b323d0c3d9b80d58c5b706c7aad9cd6a))
+
 ## 0.1.0 (2025-04-25)
 
 
