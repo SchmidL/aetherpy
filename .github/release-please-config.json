@@ -11,6 +11,7 @@
       "draft": false,
       "prerelease": false,
       "skip-github-release": false,
+      "release-type": "simple",
       "changelog-sections": [
         { "type": "feat",     "section": "✨ Features" },
         { "type": "feature",  "section": "✨ Features" },
