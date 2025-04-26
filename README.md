@@ -55,6 +55,9 @@ vs = viewshed_sweep(dem, obs_rc, obs_h=1.75, max_dist=500.0,interpolation="bilin
 
 # visualize
 plot_viewshed(dem, vs, observer=obs_rc, hillshade=True) 
+
+# Save Boolean mask as GeoTIFF
+save_raster("viewshed.tif",vs,dem)
 ```
 
 ---
