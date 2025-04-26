@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/SchmidL/aetherpy/compare/v1.0.0...v1.0.1) (2025-04-26)
+
+
+### Bug Fixes
+
+* **workflow:** update changelog layout ([6f397b1](https://github.com/SchmidL/aetherpy/commit/6f397b1cc6040a89add19a4b4cef1a1edf6b514c))
+
 ## [1.0.0](https://github.com/SchmidL/aetherpy/compare/v0.1.0...v1.0.0) (2025-04-26)
 
 
