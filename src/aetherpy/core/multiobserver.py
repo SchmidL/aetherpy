@@ -31,7 +31,7 @@ def inverse_visibility(
     dist_range=None,
     observer_mask=None,
     weight_by_cell=False,   # if True, interpret target_mask values (0–1) as weights
-    curvature_k=0.0         # Earth curvature k-factor (1.3 ≈ 4/3), 0=no correction
+    curvature_k=0.0,         # Earth curvature k-factor (1.3 ≈ 4/3), 0=no correction
     n_jobs=None,            # ignored; parallelism via Numba
 ):
     """
