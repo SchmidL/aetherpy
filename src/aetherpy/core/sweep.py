@@ -2,7 +2,9 @@ import numpy as np
 import math
 from numba import njit
 from .los import _is_visible, _is_visible_bilinear
+from .gpu import gpu_viewshed
 from .utils import timeit
+from numba import cuda
 
 @njit
 def _viewshed_naive(arr,
@@ -76,6 +78,7 @@ def viewshed_sweep(dem, observer,
                    azimuth_range=None,
                    elev_angle_range=None,
                    dist_range=None,
+                   use_gpu=None,
                    curvature_k=0.0):
     """
     Compute a constrained viewshed.
@@ -118,11 +121,29 @@ def viewshed_sweep(dem, observer,
         elev_min, elev_max = -math.pi/2, math.pi/2
 
     # 4) interpolation mode
-    use_bi = (interpolation.lower() == "bilinear")
+    # decide CPU vs GPU
+    if use_gpu is None:
+        use_gpu = cuda.is_available()
 
+    # GPU path (nearest interpolation only)
+    if use_gpu:
+        return gpu_viewshed(
+            arr,
+            (r0, c0),
+            obs_h,
+            maxd,
+            dem.res_y,
+            dem.res_x
+        )
+
+    # CPU path
+    use_bi = (interpolation.lower() == "bilinear")
     return _viewshed_naive(
-        arr,
-        r0, c0, obs_h, maxd,
-        dem.res_y, dem.res_x, use_bi,
-        az1, az2, elev_min, elev_max, min_d,curvature_k=0.0
+        arr, r0, c0, obs_h, maxd,
+        dem.res_y, dem.res_x,
+        use_bi,
+        az1, az2,
+        elev_min, elev_max,
+        min_d,
+        curvature_k
     )
