@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1](https://github.com/SchmidL/aetherpy/compare/v1.0.0...v1.0.1) (2025-04-28)
+
+
+### Bug Fixes
+
+* **multiobserver:** added missing curvature_k correction ([ac29b4f](https://github.com/SchmidL/aetherpy/commit/ac29b4fc19e33779e3f993e0b8683b02ed9106ca))
+* **workflow:** fix changelog layout ([f5a729b](https://github.com/SchmidL/aetherpy/commit/f5a729b72707669135b6486f6032d7d8306d4378))
+* **workflow:** fix changelog layout ([394f3d8](https://github.com/SchmidL/aetherpy/commit/394f3d8a107ef2a2e11971274b1830943ab7f867))
+* **workflow:** update changelog layout ([6f397b1](https://github.com/SchmidL/aetherpy/commit/6f397b1cc6040a89add19a4b4cef1a1edf6b514c))
+
 ## [1.0.0](https://github.com/SchmidL/aetherpy/compare/v0.1.0...v1.0.0) (2025-04-26)
 
 
